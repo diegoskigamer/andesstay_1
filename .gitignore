@@ -1,0 +1,24 @@
+# Microservicios (Maven/Java) — aplica a los 8 ms-andesstay-*
+ms-andesstay-*/target/
+ms-andesstay-*/.mvn/
+*.class
+
+# Frontend (Node/Vite)
+frontend/node_modules/
+frontend/dist/
+
+# Variables de entorno (contienen credenciales, nunca se suben)
+.env
+frontend/.env
+infra/apps/.env
+infra/mq/.env
+infra/kafka/.env
+
+# IDEs
+.vscode/
+.idea/
+*.iml
+
+# Sistema
+.DS_Store
+Thumbs.db

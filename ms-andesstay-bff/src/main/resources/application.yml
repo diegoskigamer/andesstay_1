@@ -1,0 +1,29 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: ms-andesstay-bff
+
+andesstay:
+  security:
+    enabled: ${ANDESSTAY_SECURITY_ENABLED:false}
+
+cognito:
+  domain: andesstay-app.auth.us-east-1.amazoncognito.com
+  client-id: 28s01tgal6ti9qtv4vnroidreo
+  client-secret: "l6uvpac9tvbsj0h4d8f5a58j344qi1je2s6dh0fev5hi0520sar"
+
+# URLs de los microservicios de dominio. En Docker, estos nombres son los
+# servicios definidos en infra/apps/compose.yml (misma red interna).
+services:
+  reservations-url: ${RESERVATIONS_SERVICE_URL:http://localhost:8081}
+  catalog-url: ${CATALOG_SERVICE_URL:http://localhost:8082}
+  audit-url: ${AUDIT_SERVICE_URL:http://localhost:8084}
+  report-url: ${REPORT_SERVICE_URL:http://localhost:8085}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

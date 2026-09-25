@@ -1,0 +1,53 @@
+# ec2-mq: clúster de RabbitMQ (2 nodos) + Management UI.
+# Corre en su propia instancia EC2, separada de ec2-apps y ec2-kafka.
+#
+# Uso:
+#   cd infra/mq
+#   cp .env.example .env
+#   docker compose up -d
+
+name: andesstay-mq
+
+services:
+  rabbitmq1:
+    image: rabbitmq:3.13-management
+    hostname: rabbitmq1
+    environment:
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE:-andesstay-cluster-cookie}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-andesstay}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-cambiar-esta-clave}
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq1-data:/var/lib/rabbitmq
+    networks:
+      - andesstay-mq-net
+
+  rabbitmq2:
+    image: rabbitmq:3.13-management
+    hostname: rabbitmq2
+    environment:
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE:-andesstay-cluster-cookie}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-andesstay}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-cambiar-esta-clave}
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    volumes:
+      - rabbitmq2-data:/var/lib/rabbitmq
+    networks:
+      - andesstay-mq-net
+    depends_on:
+      - rabbitmq1
+    # Para unir rabbitmq2 al clúster de rabbitmq1 en producción real:
+    # exec dentro del contenedor -> rabbitmqctl stop_app && rabbitmqctl join_cluster rabbit@rabbitmq1 && rabbitmqctl start_app
+    # (ver infra/mq/README.md para el paso a paso completo)
+
+volumes:
+  rabbitmq1-data:
+  rabbitmq2-data:
+
+networks:
+  andesstay-mq-net:
+    driver: bridge

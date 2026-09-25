@@ -1,0 +1,112 @@
+# ec2-apps: los 8 microservicios de AndesStay (BFF + 5 de dominio + 2 admin).
+# Corre en su propia instancia EC2, separada de ec2-mq y ec2-kafka.
+#
+# Variables sensibles (COGNITO_CLIENT_SECRET, etc.) se pasan por un
+# archivo .env junto a este compose.yml — ver infra/apps/.env.example.
+#
+# Uso:
+#   cd infra/apps
+#   cp .env.example .env   # y completa tus valores reales
+#   docker compose up -d --build
+
+name: andesstay-apps
+
+services:
+  ms-andesstay-bff:
+    build: ../../ms-andesstay-bff
+    ports:
+      - "8080:8080"
+    environment:
+      ANDESSTAY_SECURITY_ENABLED: ${ANDESSTAY_SECURITY_ENABLED:-false}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:-}
+      COGNITO_DOMAIN: ${COGNITO_DOMAIN:-}
+      COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
+      COGNITO_CLIENT_SECRET: ${COGNITO_CLIENT_SECRET:-}
+      RESERVATIONS_SERVICE_URL: http://ms-andesstay-reservations:8081
+      CATALOG_SERVICE_URL: http://ms-andesstay-catalog:8082
+      AUDIT_SERVICE_URL: http://ms-andesstay-audit:8084
+      REPORT_SERVICE_URL: http://ms-andesstay-report:8085
+    depends_on:
+      - ms-andesstay-reservations
+      - ms-andesstay-catalog
+      - ms-andesstay-audit
+      - ms-andesstay-report
+    networks:
+      - andesstay-apps-net
+
+  ms-andesstay-reservations:
+    build: ../../ms-andesstay-reservations
+    ports:
+      - "8081:8081"
+    environment:
+      CATALOG_SERVICE_URL: http://ms-andesstay-catalog:8082
+      # ec2-mq y ec2-kafka son instancias EC2 aparte: se configuran con la
+      # IP/DNS privada real al desplegar (ver infra/README.md).
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq-host-placeholder}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka-host-placeholder:9092}
+    networks:
+      - andesstay-apps-net
+
+  ms-andesstay-catalog:
+    build: ../../ms-andesstay-catalog
+    ports:
+      - "8082:8082"
+    networks:
+      - andesstay-apps-net
+
+  ms-andesstay-notify:
+    build: ../../ms-andesstay-notify
+    ports:
+      - "8083:8083"
+    environment:
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq-host-placeholder}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+    networks:
+      - andesstay-apps-net
+
+  ms-andesstay-audit:
+    build: ../../ms-andesstay-audit
+    ports:
+      - "8084:8084"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka-host-placeholder:9092}
+    networks:
+      - andesstay-apps-net
+
+  ms-andesstay-report:
+    build: ../../ms-andesstay-report
+    ports:
+      - "8085:8085"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka-host-placeholder:9092}
+    networks:
+      - andesstay-apps-net
+
+  ms-andesstay-rabbitmq-admin:
+    build: ../../ms-andesstay-rabbitmq-admin
+    ports:
+      - "8086:8086"
+    environment:
+      RABBITMQ_MANAGEMENT_URL: ${RABBITMQ_MANAGEMENT_URL:-http://rabbitmq-host-placeholder:15672}
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+    networks:
+      - andesstay-apps-net
+
+  ms-andesstay-kafka-admin:
+    build: ../../ms-andesstay-kafka-admin
+    ports:
+      - "8087:8087"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka-host-placeholder:9092}
+    networks:
+      - andesstay-apps-net
+
+networks:
+  andesstay-apps-net:
+    driver: bridge
